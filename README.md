@@ -269,5 +269,171 @@ choco install kubernetes-cli
 ![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/579eb691-fb8d-48d3-803a-b0eedac1ee49)
 
 
+```
+az aks get-credentials --resource-group microservice_deployment --name Mern_deployment
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/fe9cceab-6ec3-4805-8381-f0642973b1bb)
+
+Lets Test it 
+
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/3c74b5b0-303b-43f1-af92-8bd222a80881)
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/669b7413-65a8-4948-bc1f-3571c499d687)
+
+## Deploying Hello Microservice
+
+Imperative approach-
+```
+kubectl create deployment hello --image=public.ecr.aws/c3w1m1q2/hello_service_adarsh --replicas=3 --port=3001
+```
+Declarative approach
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: hello
+  name: hello
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello
+  template:
+    metadata:
+      labels:
+        app: hello
+    spec:
+      containers:
+      - image: adarsh321/hello_service_adarsh:latest
+        name: hello-microservice
+        ports:
+        - containerPort: 3001
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/aaa0231b-627b-480e-a924-15dbbdd86104)
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/e10508ae-5cbb-49f8-a21d-9d339575b0ac)
+
+Now creating service to expose the deployment
+
+Imperative approach-
+```
+kubectl expose deployment hello --port=3001 --target-port=3001 --type=LoadBalancer --name=hello-svc
+```
+Declarative approach
+```
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: hello
+  name: hello-svc
+spec:
+  ports:
+  - port: 3001
+    protocol: TCP
+    targetPort: 3001
+  selector:
+    app: hello
+  type: LoadBalancer
+status:
+  loadBalancer: {}
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/f32fcd61-ccf1-465a-851b-33df75385efc)
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/ac581ea5-4d5b-478f-b40e-7a8a51918913)
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/5fe3d48c-3949-47bc-a4f2-3253fb904957)
+
+## Deploying Profile Microservice
+
+This Microservice is using credential of MongoDB database to handle that will be using secrets
+
+Creating Secret to handle the MONGO DB credientials
+```
+kubectl create secret generic mongo-secret --from-literal=MONGO_URL=" your mongo db url"
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/cd6662c7-3e64-419f-9683-444317995623)
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/b38753c4-4384-4b72-ad26-cfba1746cec3)
+
+Deployment file of Profile Microservice
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: profile-service-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: profile-service
+  template:
+    metadata:
+      labels:
+        app: profile-service
+    spec:
+      containers:
+        - name: profile-service-container
+          image: adarsh321/profile_service_adarsh:latest
+          ports:
+            - containerPort: 3002
+          env:
+            - name: MONGO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: MONGO_URL
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/4f220164-c5f6-4749-824a-7f6552870eac)
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/c5dc526b-0368-43e9-a92b-82f2589f5653)
+
+Now expose the Deployment to Loadbalancer service
+```
+kubectl expose deployment profile-service-deployment --type=LoadBalancer --port=3002 --target-port=3002 --name=profile-service
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/ab310de6-551e-48b5-8942-fd5058cbd19a)
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/2c8de7c2-2f2b-435b-9104-083d5023f36d)
+
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/0f0c7be5-9b84-4032-8f3e-70fa6ed612f5)
+
+
+## Deploying Frontend Microservice
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend-container
+          image: adarsh321/frontend_service_adarsh:latest
+          ports:
+            - containerPort: 3000  
+          env:
+            - name: REACT_APP_API_URL
+              value: "http://your- profile-loadbalancer-service-dns"
+            - name: REACT_APP_API_HELLO
+              value: "http://your-hello-loadbalancer-service-dns"
+```
+
+```
+kubectl expose deployment frontend-deployment --type=LoadBalancer --port=3000 --target-port=3000 --name=frontend-service
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/5757d163-e915-4c39-b79c-55dc8efcaf63)
+
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/675fbbac-6d82-465d-abde-99ddb7d8a2ff)
+
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/b6864a78-a412-4906-b77e-8a16a5d491ac)
+
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/72d8660c-1486-4576-ad04-c5da25e5d7c8)
+
+
 
 
