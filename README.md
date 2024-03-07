@@ -260,6 +260,13 @@ docker push adarsh321/frontend_service_adarsh:latest
 
 
 
+## Deployment in AKS
+
+Installing kubectl cli on windows
+```
+choco install kubernetes-cli
+```
+![image](https://github.com/AdarshIITDH/MERN-deployment-on-AKS/assets/60352729/579eb691-fb8d-48d3-803a-b0eedac1ee49)
 
 
 
